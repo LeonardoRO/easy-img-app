@@ -37,10 +37,12 @@ final class FolderNode {
 }
 
 /// Folder tree for jumping to other directories. Selecting a folder shows its images.
-final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate {
+final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSMenuDelegate {
     var onSelectFolder: ((URL) -> Void)?
     /// A folder was clicked with the mouse (as opposed to chosen with the keyboard).
     var onFolderClicked: (() -> Void)?
+    /// Something was copied (message for the confirmation notice).
+    var onCopied: ((String) -> Void)?
 
     private let outlineView = NSOutlineView()
     private var roots: [FolderNode] = []
@@ -59,6 +61,9 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
         outlineView.delegate = self
         outlineView.target = self
         outlineView.action = #selector(rowClicked(_:))
+        let menu = NSMenu()
+        menu.delegate = self
+        outlineView.menu = menu
 
         let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 220, height: 400))
         scrollView.documentView = outlineView
@@ -109,6 +114,28 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
         guard row >= 0 else { return }
         outlineView.selectRowIndexes([row], byExtendingSelection: false)
         outlineView.scrollRowToVisible(row)
+    }
+
+    // MARK: Right-click menu
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        guard let node = outlineView.item(atRow: outlineView.clickedRow) as? FolderNode else { return }
+        for (title, action) in [("Copy Path", #selector(copyPath(_:))), ("Show in Finder", #selector(showInFinder(_:)))] {
+            let item = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
+            item.target = self
+            item.representedObject = node.url
+        }
+    }
+
+    @objc private func copyPath(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        Clipboard.copyPath(of: url)
+        onCopied?("Folder path copied")
+    }
+
+    @objc private func showInFinder(_ sender: NSMenuItem) {
+        if let url = sender.representedObject as? URL { NSWorkspace.shared.activateFileViewerSelecting([url]) }
     }
 
     @objc private func rowClicked(_ sender: Any?) {

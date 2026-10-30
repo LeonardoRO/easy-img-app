@@ -6,6 +6,12 @@ final class GridCollectionView: NSCollectionView {
     var onOpen: (() -> Void)?
     var onResize: ((_ bigger: Bool) -> Void)?
     var onToggle: (() -> Void)?
+    var contextMenu: ((Int) -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let indexPath = indexPathForItem(at: convert(event.locationInWindow, from: nil)) else { return nil }
+        return contextMenu?(indexPath.item)
+    }
 
     override func keyDown(with event: NSEvent) {
         switch event.charactersIgnoringModifiers {
@@ -33,6 +39,7 @@ final class ThumbnailGridView: NSView, NSCollectionViewDataSource, NSCollectionV
     var onOpen: ((Int) -> Void)?
     /// G pressed: back to the single-image view.
     var onToggle: (() -> Void)?
+    var contextMenu: ((Int) -> NSMenu?)?
 
     private let collectionView = GridCollectionView()
     private let layout = NSCollectionViewFlowLayout()
@@ -62,6 +69,12 @@ final class ThumbnailGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         }
         collectionView.onResize = { [weak self] bigger in self?.resize(bigger: bigger) }
         collectionView.onToggle = { [weak self] in self?.onToggle?() }
+        collectionView.contextMenu = { [weak self] index in
+            // Right-click also selects, like Finder.
+            self?.select(index)
+            self?.onSelect?(index)
+            return self?.contextMenu?(index)
+        }
         applyItemSize()
 
         let scrollView = NSScrollView()

@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controllers: [ViewerWindowController] = []
     private var didOpenAtLaunch = false
     private lazy var settingsWindow = SettingsWindowController()
+    private lazy var helpWindow = HelpWindowController()
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         Settings.registerDefaults()
@@ -114,21 +115,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Settings
 
     @objc func showSettings(_ sender: Any?) {
-        settingsWindow.showWindow(sender)
-        settingsWindow.window?.makeKeyAndOrderFront(sender)
+        settingsWindow.show(.general)
+    }
+
+    func showSettings(tab: SettingsWindowController.Tab) {
+        settingsWindow.show(tab)
     }
 
     @objc func toggleFilmstrip(_ sender: Any?) { Settings.showFilmstrip.toggle() }
     @objc func toggleCropThumbnails(_ sender: Any?) { Settings.cropThumbnails.toggle() }
 
+    // MARK: About & Help
+
+    @objc func showAbout(_ sender: Any?) {
+        let credits = NSMutableAttributedString(
+            string: "A fast, keyboard-driven image viewer for macOS.\n\n",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.labelColor])
+        credits.append(NSAttributedString(string: "github.com/LeonardoRO/easy-img-app", attributes: [
+            .font: NSFont.systemFont(ofSize: 11),
+            .link: URL(string: "https://github.com/LeonardoRO/easy-img-app")!,
+        ]))
+        let centered = NSMutableParagraphStyle()
+        centered.alignment = .center
+        credits.addAttribute(.paragraphStyle, value: centered, range: NSRange(location: 0, length: credits.length))
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "Easy Img",
+            .credits: credits,
+            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "Copyright © 2026 Leonardo Ribeiro Oliveira. Released under the MIT License.",
+        ])
+        NSApp.activate()
+    }
+
+    @objc func showEasyImgHelp(_ sender: Any?) {
+        helpWindow.showWindow(sender)
+        helpWindow.window?.makeKeyAndOrderFront(sender)
+    }
+
     // MARK: Menu
 
     private func makeMainMenu() -> NSMenu {
-        let appName = ProcessInfo.processInfo.processName
+        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Easy Img"
         let main = NSMenu()
 
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About \(appName)", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About \(appName)", action: #selector(showAbout(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Settings…", action: #selector(showSettings(_:)), keyEquivalent: ",")
         appMenu.addItem(.separator())
@@ -152,12 +182,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         main.addItem(submenu: fileMenu, title: "File")
 
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        // In text fields this copies text; in the viewer, the image.
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(.separator())
+        let copyPath = editMenu.addItem(withTitle: "Copy Path", action: #selector(ViewerWindowController.copyPath(_:)), keyEquivalent: "c")
+        copyPath.keyEquivalentModifierMask = [.command, .option]
+        let copyFolder = editMenu.addItem(withTitle: "Copy Folder Path", action: #selector(ViewerWindowController.copyFolderPath(_:)), keyEquivalent: "c")
+        copyFolder.keyEquivalentModifierMask = [.command, .option, .shift]
+        main.addItem(submenu: editMenu, title: "Edit")
+
         let goMenu = NSMenu(title: "Go")
-        goMenu.addItem(arrowItem("Previous Image", #selector(ViewerWindowController.showPreviousImage(_:)), NSLeftArrowFunctionKey, []))
-        goMenu.addItem(arrowItem("Next Image", #selector(ViewerWindowController.showNextImage(_:)), NSRightArrowFunctionKey, []))
+        // ← and → are handled by the image and grid views: as menu shortcuts they'd take the arrows from text fields.
+        goMenu.addItem(withTitle: "Previous Image", action: #selector(ViewerWindowController.showPreviousImage(_:)), keyEquivalent: "[")
+        goMenu.addItem(withTitle: "Next Image", action: #selector(ViewerWindowController.showNextImage(_:)), keyEquivalent: "]")
         goMenu.addItem(.separator())
-        goMenu.addItem(arrowItem("First Image", #selector(ViewerWindowController.showFirstImage(_:)), NSUpArrowFunctionKey, .command))
-        goMenu.addItem(arrowItem("Last Image", #selector(ViewerWindowController.showLastImage(_:)), NSDownArrowFunctionKey, .command))
+        goMenu.addItem(withTitle: "First Image", action: #selector(ViewerWindowController.showFirstImage(_:)), keyEquivalent: "{")
+        goMenu.addItem(withTitle: "Last Image", action: #selector(ViewerWindowController.showLastImage(_:)), keyEquivalent: "}")
         main.addItem(submenu: goMenu, title: "Go")
 
         let viewMenu = NSMenu(title: "View")
@@ -168,6 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewMenu.addItem(withTitle: "Show Thumbnails", action: #selector(ViewerWindowController.toggleThumbnails(_:)), keyEquivalent: "")
         viewMenu.addItem(withTitle: "Show Filmstrip", action: #selector(toggleFilmstrip(_:)), keyEquivalent: "")
         viewMenu.addItem(withTitle: "Crop Thumbnails to Squares", action: #selector(toggleCropThumbnails(_:)), keyEquivalent: "")
+        viewMenu.addItem(withTitle: "Ask AI", action: #selector(ViewerWindowController.toggleChat(_:)), keyEquivalent: "k")
         viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(ViewerWindowController.zoomIn(_:)), keyEquivalent: "=")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(ViewerWindowController.zoomOut(_:)), keyEquivalent: "-")
@@ -184,13 +232,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.windowsMenu = windowMenu
         main.addItem(submenu: windowMenu, title: "Window")
 
-        return main
-    }
+        let helpMenu = NSMenu(title: "Help")
+        helpMenu.addItem(withTitle: "\(appName) Help", action: #selector(showEasyImgHelp(_:)), keyEquivalent: "?")
+        NSApp.helpMenu = helpMenu
+        main.addItem(submenu: helpMenu, title: "Help")
 
-    private func arrowItem(_ title: String, _ action: Selector, _ key: Int, _ modifiers: NSEvent.ModifierFlags) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: String(Character(UnicodeScalar(key)!)))
-        item.keyEquivalentModifierMask = modifiers
-        return item
+        return main
     }
 }
 

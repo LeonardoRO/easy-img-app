@@ -52,6 +52,7 @@ final class ImageCanvasView: NSView {
     var onJump: ((_ toEnd: Bool) -> Void)?
     var onEscape: (() -> Void)?
     var onToggleThumbnails: (() -> Void)?
+    var contextMenu: (() -> NSMenu?)?
     var onZoomChange: (() -> Void)?
     /// Called when the zoom needs more pixels than the (screen-sized) decoded image has.
     var onNeedsDetail: (() -> Void)?
@@ -276,6 +277,11 @@ final class ImageCanvasView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         focus()
+    }
+
+    // Right-clicks on the image bubble up here from the scroll view.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu?()
     }
 
     override func keyDown(with event: NSEvent) {

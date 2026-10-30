@@ -11,23 +11,33 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var sourceName: String
     /// The folder being shown, if the list is a folder (not a multi-selection).
     private var sourceFolder: URL?
-    private var urls: [URL]
-    private var index: Int
+    private var urls: [URL] {
+        didSet { syncChat() }
+    }
+    private var index: Int {
+        didSet { syncChat() }
+    }
     private var mode: Mode
     private let canvas = ImageCanvasView()
     private let filmstrip = FilmstripView()
     private let grid = ThumbnailGridView()
+    private let toast = ToastView()
     private var canvasAboveFilmstrip: NSLayoutConstraint!
     private var canvasToBottom: NSLayoutConstraint!
     private let sidebar = SidebarViewController()
     private let sidebarItem: NSSplitViewItem
     private var sidebarObservation: NSKeyValueObservation?
+    private let chat = ChatPanelController()
+    private let chatItem: NSSplitViewItem
+    private var chatObservation: NSKeyValueObservation?
     private let loader = ImageLoader()
     /// Image whose full-resolution version has been requested.
     private var detailURL: URL?
     var onClose: ((ViewerWindowController) -> Void)?
 
     private static let showSidebarKey = "ShowSidebar"
+    private static let showChatKey = "ShowChat"
+    private static let askAIItem = NSToolbarItem.Identifier("AskAI")
     private static let thumbnailsItem = NSToolbarItem.Identifier("Thumbnails")
     private static let zoomInItem = NSToolbarItem.Identifier("ZoomIn")
     private static let zoomOutItem = NSToolbarItem.Identifier("ZoomOut")
@@ -62,6 +72,13 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             grid.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             grid.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(toast)
+        NSLayoutConstraint.activate([
+            toast.centerXAnchor.constraint(equalTo: content.centerXAnchor),
+            toast.topAnchor.constraint(equalTo: content.safeAreaLayoutGuide.topAnchor, constant: 16),
+            toast.widthAnchor.constraint(lessThanOrEqualTo: content.widthAnchor, constant: -40),
+        ])
         let contentController = NSViewController()
         contentController.view = content
 
@@ -70,9 +87,15 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         sidebarItem.maximumThickness = 400
         sidebarItem.canCollapse = true
         sidebarItem.isCollapsed = !UserDefaults.standard.bool(forKey: Self.showSidebarKey)
+        chatItem = NSSplitViewItem(inspectorWithViewController: chat)
+        chatItem.minimumThickness = 280
+        chatItem.maximumThickness = 560
+        chatItem.canCollapse = true
+        chatItem.isCollapsed = !UserDefaults.standard.bool(forKey: Self.showChatKey)
         let split = NSSplitViewController()
         split.addSplitViewItem(sidebarItem)
         split.addSplitViewItem(NSSplitViewItem(viewController: contentController))
+        split.addSplitViewItem(chatItem)
 
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: size),
@@ -106,6 +129,10 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         canvas.onToggleThumbnails = { [weak self] in self?.toggleThumbnails(nil) }
         grid.onToggle = { [weak self] in self?.toggleThumbnails(nil) }
         canvas.onZoomChange = { [weak self] in self?.updateTitle() }
+        canvas.contextMenu = { [weak self] in self?.currentURL.flatMap { self?.contextMenu(for: $0) } }
+        grid.contextMenu = { [weak self] index in self?.urls.indices.contains(index) == true ? self?.contextMenu(for: self!.urls[index]) : nil }
+        filmstrip.contextMenu = { [weak self] index in self?.urls.indices.contains(index) == true ? self?.contextMenu(for: self!.urls[index]) : nil }
+        sidebar.onCopied = { [weak self] message in self?.toast.show(message) }
         canvas.onNeedsDetail = { [weak self] in self?.loadDetail() }
         filmstrip.onSelect = { [weak self] index in self?.show(at: index) }
         grid.onSelect = { [weak self] index in
@@ -124,6 +151,11 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             if !item.isCollapsed { self?.sidebar.reveal(self?.sourceFolder) }
         }
         if !sidebarItem.isCollapsed { sidebar.reveal(folder) }
+        chat.onOpenSettings = { tab in (NSApp.delegate as? AppDelegate)?.showSettings(tab: tab) }
+        chatObservation = chatItem.observe(\.isCollapsed, options: [.new]) { item, _ in
+            UserDefaults.standard.set(!item.isCollapsed, forKey: Self.showChatKey)
+        }
+        syncChat()
 
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged),
                                                name: Settings.didChange, object: nil)
@@ -197,6 +229,17 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         filmstrip.reloadThumbnails()
     }
 
+    /// The chat panel follows the image being viewed (or selected in the grid).
+    private func syncChat() {
+        chat.setImage(currentURL)
+    }
+
+    @objc func toggleChat(_ sender: Any?) {
+        let show = chatItem.isCollapsed
+        chatItem.animator().isCollapsed = !show
+        if show { chat.focusInput() } else { focusContent() }
+    }
+
     @objc func toggleThumbnails(_ sender: Any?) {
         setMode(mode == .grid ? .single : .grid)
     }
@@ -207,6 +250,71 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     @objc func showNextImage(_ sender: Any?) { step(1) }
     @objc func showFirstImage(_ sender: Any?) { if !urls.isEmpty { show(at: 0) } }
     @objc func showLastImage(_ sender: Any?) { if !urls.isEmpty { show(at: urls.count - 1) } }
+
+    // MARK: Copying
+
+    private var currentFolder: URL? { sourceFolder ?? currentURL?.deletingLastPathComponent() }
+
+    /// ⌘C: the image itself (file + picture), ready to paste anywhere.
+    @objc func copy(_ sender: Any?) {
+        guard let url = currentURL else { return }
+        Clipboard.copyImage(at: url)
+        toast.show("Image copied")
+    }
+
+    @objc func copyPath(_ sender: Any?) {
+        if let url = currentURL { copyToClipboard(path: url) }
+    }
+
+    @objc func copyFolderPath(_ sender: Any?) {
+        if let folder = currentFolder { copyToClipboard(path: folder, isFolder: true) }
+    }
+
+    private func copyToClipboard(path url: URL, isFolder: Bool = false) {
+        Clipboard.copyPath(of: url)
+        toast.show(isFolder ? "Folder path copied" : "Path copied")
+    }
+
+    /// Right-click menu for an image (in the viewer, grid or filmstrip).
+    private func contextMenu(for url: URL) -> NSMenu {
+        let menu = NSMenu()
+        func add(_ title: String, _ action: Selector, _ object: URL) {
+            let item = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
+            item.target = self
+            item.representedObject = object
+        }
+        add("Copy Path", #selector(copyPathFromMenu(_:)), url)
+        add("Copy Folder Path", #selector(copyFolderPathFromMenu(_:)), url.deletingLastPathComponent())
+        add("Copy Name", #selector(copyNameFromMenu(_:)), url)
+        add("Copy Image", #selector(copyImageFromMenu(_:)), url)
+        menu.addItem(.separator())
+        add("Show in Finder", #selector(revealFromMenu(_:)), url)
+        return menu
+    }
+
+    @objc private func copyPathFromMenu(_ sender: NSMenuItem) {
+        if let url = sender.representedObject as? URL { copyToClipboard(path: url) }
+    }
+
+    @objc private func copyFolderPathFromMenu(_ sender: NSMenuItem) {
+        if let url = sender.representedObject as? URL { copyToClipboard(path: url, isFolder: true) }
+    }
+
+    @objc private func copyNameFromMenu(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        Clipboard.copy(url.lastPathComponent)
+        toast.show("Name copied")
+    }
+
+    @objc private func copyImageFromMenu(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        Clipboard.copyImage(at: url)
+        toast.show("Image copied")
+    }
+
+    @objc private func revealFromMenu(_ sender: NSMenuItem) {
+        if let url = sender.representedObject as? URL { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+    }
 
     @objc func revealInFinder(_ sender: Any?) {
         guard urls.indices.contains(index) else { return }
@@ -293,7 +401,8 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     // MARK: Toolbar
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.thumbnailsItem, Self.zoomOutItem, Self.zoomInItem]
+        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.thumbnailsItem, Self.zoomOutItem, Self.zoomInItem,
+         .inspectorTrackingSeparator, .flexibleSpace, Self.askAIItem]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -307,11 +416,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         case Self.thumbnailsItem: (label, symbol, action) = ("Thumbnails", "square.grid.2x2", #selector(toggleThumbnails(_:)))
         case Self.zoomInItem: (label, symbol, action) = ("Zoom In", "plus.magnifyingglass", #selector(zoomIn(_:)))
         case Self.zoomOutItem: (label, symbol, action) = ("Zoom Out", "minus.magnifyingglass", #selector(zoomOut(_:)))
+        case Self.askAIItem: (label, symbol, action) = ("Ask AI", "sparkles", #selector(toggleChat(_:)))
         default: return nil
         }
         let item = NSToolbarItem(itemIdentifier: id)
         item.label = label
-        item.toolTip = id == Self.thumbnailsItem ? "Thumbnails (G)" : label
+        item.toolTip = id == Self.thumbnailsItem ? "Thumbnails (G)" : id == Self.askAIItem ? "Ask AI (⌘K)" : label
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
         item.action = action
         item.target = self
@@ -322,12 +432,18 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
 extension ViewerWindowController: NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
+        case #selector(toggleChat(_:)):
+            menuItem.title = chatItem.isCollapsed ? "Ask AI" : "Hide AI Chat"
+            return true
         case #selector(toggleThumbnails(_:)):
             menuItem.title = mode == .grid ? "Show Image" : "Show Thumbnails"
             return true
         case #selector(showPreviousImage(_:)), #selector(showNextImage(_:)):
             return urls.count > 1
-        case #selector(showFirstImage(_:)), #selector(showLastImage(_:)), #selector(revealInFinder(_:)):
+        case #selector(copyFolderPath(_:)):
+            return currentFolder != nil
+        case #selector(showFirstImage(_:)), #selector(showLastImage(_:)), #selector(revealInFinder(_:)),
+             #selector(copy(_:)), #selector(copyPath(_:)):
             return !urls.isEmpty
         case #selector(zoomIn(_:)), #selector(zoomOut(_:)):
             return mode == .grid ? !urls.isEmpty : canvas.hasImage

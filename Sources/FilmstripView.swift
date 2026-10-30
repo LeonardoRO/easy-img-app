@@ -3,6 +3,12 @@ import AppKit
 /// Never takes keyboard focus (arrow keys stay with the image); a click picks an image.
 final class FilmstripCollectionView: NSCollectionView {
     var onClick: ((Int) -> Void)?
+    var contextMenu: ((Int) -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let indexPath = indexPathForItem(at: convert(event.locationInWindow, from: nil)) else { return nil }
+        return contextMenu?(indexPath.item)
+    }
 
     override var acceptsFirstResponder: Bool { false }
 
@@ -17,6 +23,10 @@ final class FilmstripCollectionView: NSCollectionView {
 final class FilmstripView: NSView, NSCollectionViewDataSource {
     static let height: CGFloat = 78
     var onSelect: ((Int) -> Void)?
+    var contextMenu: ((Int) -> NSMenu?)? {
+        get { collectionView.contextMenu }
+        set { collectionView.contextMenu = newValue }
+    }
 
     private let collectionView = FilmstripCollectionView()
     private var urls: [URL] = []

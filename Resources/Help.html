@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy Img Help</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --text: #1d1d1f; --muted: #6e6e73; --bg: #ffffff; --line: #e5e5ea; --accent: #0a66d8; --key-bg: #f2f2f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --text: #f5f5f7; --muted: #a1a1a6; --bg: #1e1e1e; --line: #3a3a3c; --accent: #4c9dff; --key-bg: #2c2c2e; }
+  }
+  body { font: 14px/1.55 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text); background: var(--bg);
+         margin: 0 auto; padding: 28px 32px 48px; max-width: 760px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 34px 0 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 14px; margin: 20px 0 6px; }
+  p, li { margin: 6px 0; }
+  .lead { color: var(--muted); margin-bottom: 18px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  kbd { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--key-bg); border: 1px solid var(--line);
+        border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .note { color: var(--muted); font-size: 13px; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Easy Img Help</h1>
+<p class="lead">A fast, keyboard-driven image viewer: open an image and flip through its whole folder with the arrow keys.</p>
+<nav>
+  <a href="#opening">Opening images</a>
+  <a href="#browsing">Browsing</a>
+  <a href="#grid">Thumbnails</a>
+  <a href="#zoom">Zoom</a>
+  <a href="#copy">Copying</a>
+  <a href="#ai">Ask AI</a>
+  <a href="#costs">Costs</a>
+  <a href="#shortcuts">Shortcuts</a>
+  <a href="#trouble">Troubleshooting</a>
+</nav>
+
+<h2 id="opening">Opening images and folders</h2>
+<ul>
+  <li><b>From Finder:</b> right-click an image → <i>Open With → Easy Img</i>. For images and folders, right-click → <i>Quick Actions</i> (or <i>Services</i>) → <i>Open in Easy Img</i>.</li>
+  <li><b>Drag</b> images or folders onto the Easy Img icon in the Dock.</li>
+  <li><b>Inside the app:</b> <i>File → Open…</i> (<kbd>⌘O</kbd>), or pick a folder in the sidebar.</li>
+  <li>To make Easy Img the default viewer: select an image in Finder → <i>Get Info</i> → <i>Open with: Easy Img</i> → <i>Change All…</i></li>
+</ul>
+<p>Opening a single image shows it with the rest of its folder ready to browse. Opening a folder shows its images as thumbnails. Opening several selected items browses just those.</p>
+
+<h2 id="browsing">Browsing</h2>
+<ul>
+  <li><kbd>←</kbd> / <kbd>→</kbd> go to the previous / next image. At the end of the folder it wraps around to the start.</li>
+  <li><kbd>Home</kbd> / <kbd>End</kbd> jump to the first / last image.</li>
+  <li>The window title shows the file name, its position (for example <i>12 of 172</i>) and the zoom level.</li>
+  <li><b>Sidebar:</b> the button at the top left (<kbd>⌃⌘S</kbd>) shows a folder tree. Click a folder to see its images.</li>
+  <li><b>Filmstrip:</b> the strip of thumbnails under the image. Click one to jump to it. It can be turned off in <i>Settings → General</i> or <i>View → Show Filmstrip</i>.</li>
+</ul>
+
+<h2 id="grid">Thumbnail grid</h2>
+<ul>
+  <li>Press <kbd>G</kbd> (or the grid button in the toolbar) to switch between the image and the grid.</li>
+  <li>Use the arrow keys to move the selection. <kbd>Return</kbd>, <kbd>Space</kbd> or a double-click opens the image.</li>
+  <li>In the image view, <kbd>Esc</kbd> goes back to the grid with that image selected.</li>
+  <li><kbd>+</kbd> / <kbd>−</kbd> make the thumbnails bigger or smaller.</li>
+  <li>Thumbnails show the whole picture. To crop them into even squares, turn on <i>Settings → General → Crop thumbnails</i> or <i>View → Crop Thumbnails to Squares</i>.</li>
+</ul>
+
+<h2 id="zoom">Zoom and scrolling</h2>
+<ul>
+  <li><kbd>+</kbd> / <kbd>−</kbd> zoom in and out, <kbd>0</kbd> fits the image to the window, <kbd>1</kbd> shows it at actual size. You can also pinch on the trackpad.</li>
+  <li>Each image opens fitted to the window, and small images are never enlarged.</li>
+  <li>When the image is bigger than the window, scroll with the trackpad or wheel, or drag the image.</li>
+  <li>A <b>minimap</b> appears in the bottom-right corner, with a frame showing the part you're looking at. Click or drag inside it to move around.</li>
+  <li>Large photos first load at screen resolution, then at full resolution when you zoom in far enough.</li>
+</ul>
+
+<h2 id="copy">Copying paths and images</h2>
+<table>
+  <tr><th>To copy</th><th>Keys</th></tr>
+  <tr><td>The image itself (paste into Messages, Mail, documents, or Finder as a file)</td><td><kbd>⌘C</kbd></td></tr>
+  <tr><td>The path of the current image</td><td><kbd>⌥⌘C</kbd></td></tr>
+  <tr><td>The path of its folder</td><td><kbd>⇧⌥⌘C</kbd></td></tr>
+</table>
+<p>Right-click an image, a thumbnail or a filmstrip item for <i>Copy Path</i>, <i>Copy Folder Path</i>, <i>Copy Name</i>, <i>Copy Image</i> and <i>Show in Finder</i>. Right-click a folder in the sidebar for <i>Copy Path</i> and <i>Show in Finder</i>. A short notice confirms what was copied.</p>
+
+<h2 id="ai">Ask AI</h2>
+<p>Ask questions about the image you're viewing: what it shows, the text it contains, a translation, where a photo might have been taken, and so on.</p>
+<h3>Setting up</h3>
+<ol>
+  <li>Open <i>Easy Img → Settings…</i> (<kbd>⌘,</kbd>) → <b>AI</b>.</li>
+  <li>Choose the <b>Assistant</b> provider: Claude, OpenAI, Gemini, DeepSeek, Kimi or Custom.</li>
+  <li>Paste that provider's <b>API key</b>. Keys are stored in your macOS Keychain.</li>
+  <li>Optionally press <b>Load Models</b> and choose another model.</li>
+</ol>
+<p><b>Custom</b> works with any OpenAI-compatible server, such as OpenRouter, or Ollama and LM Studio on your Mac. Enter its address (for Ollama, <code>http://localhost:11434/v1</code>), type the model name in <i>Model</i>, and tick <i>The custom server's model can see images</i> if it can.</p>
+<h3>Chatting</h3>
+<ul>
+  <li>Press <kbd>⌘K</kbd> or the ✨ button to open the chat panel on the right. Type a question and press <kbd>Return</kbd>.</li>
+  <li>The chat follows the image you're viewing. Each image keeps its own conversation while the window is open, and the pencil button starts a new one.</li>
+  <li>Each answer shows which model replied and its estimated cost. The stop button ends an answer early.</li>
+  <li>To switch models quickly, turn on <i>Show a model picker in the chat panel</i> in <i>Settings → AI</i>.</li>
+</ul>
+<h3>Privacy</h3>
+<p>An image is sent to the AI provider only when you ask a question about it, resized to at most 1568 pixels. Models that can't see images (such as <code>deepseek-v4-pro</code>) receive an <b>on-device description</b> instead: the objects and text macOS recognized in the image. In that case the image itself never leaves your Mac.</p>
+
+<h2 id="costs">Costs and spending limit</h2>
+<ul>
+  <li><i>Settings → Costs</i> shows spending today and this month, a breakdown by model, and recent requests with the tokens they used.</li>
+  <li><b>Monthly spending limit:</b> tick it and enter an amount in US dollars. The chat warns when you pass 80%. Once the limit is reached, each request asks first, and you can <i>Allow This Request</i>.</li>
+  <li><b>Prices:</b> costs are estimates: the tokens each provider reports multiplied by the prices in the table. Prices change, so you can edit them, add models with <kbd>+</kbd>, or press <i>Reset to Defaults</i>. A model matches the longest entry its name starts with.</li>
+  <li><i>Clear History…</i> erases the recorded requests, which also resets this month's total.</li>
+</ul>
+<p class="note">Your provider's bill is the final word. Requests stopped before they finish may not be counted.</p>
+
+<h2 id="shortcuts">Keyboard shortcuts</h2>
+<table>
+  <tr><th>Action</th><th>Keys</th></tr>
+  <tr><td>Previous / next image</td><td><kbd>←</kbd> <kbd>→</kbd> · <kbd>↑</kbd> <kbd>↓</kbd> · <kbd>⌘[</kbd> <kbd>⌘]</kbd> · <kbd>⇧Space</kbd> <kbd>Space</kbd></td></tr>
+  <tr><td>First / last image</td><td><kbd>Home</kbd> <kbd>End</kbd> · <kbd>⇧⌘[</kbd> <kbd>⇧⌘]</kbd></td></tr>
+  <tr><td>Thumbnail grid on/off</td><td><kbd>G</kbd></td></tr>
+  <tr><td>Open selected thumbnail</td><td><kbd>Return</kbd> · <kbd>Space</kbd> · double-click</td></tr>
+  <tr><td>Back to the grid</td><td><kbd>Esc</kbd></td></tr>
+  <tr><td>Zoom in / out</td><td><kbd>+</kbd> <kbd>−</kbd> · <kbd>⌘=</kbd> <kbd>⌘−</kbd></td></tr>
+  <tr><td>Fit to window / actual size</td><td><kbd>0</kbd> <kbd>1</kbd> · <kbd>⌘0</kbd> <kbd>⌘1</kbd></td></tr>
+  <tr><td>Show/hide sidebar</td><td><kbd>⌃⌘S</kbd></td></tr>
+  <tr><td>Ask AI</td><td><kbd>⌘K</kbd></td></tr>
+  <tr><td>Copy image / path / folder path</td><td><kbd>⌘C</kbd> · <kbd>⌥⌘C</kbd> · <kbd>⇧⌥⌘C</kbd></td></tr>
+  <tr><td>Show in Finder</td><td><kbd>⌘R</kbd></td></tr>
+  <tr><td>Open…</td><td><kbd>⌘O</kbd></td></tr>
+  <tr><td>Full screen</td><td><kbd>⌃⌘F</kbd> (<kbd>Esc</kbd> to leave)</td></tr>
+  <tr><td>Settings</td><td><kbd>⌘,</kbd></td></tr>
+  <tr><td>Help</td><td><kbd>⌘?</kbd></td></tr>
+</table>
+
+<h2 id="trouble">Troubleshooting</h2>
+<ul>
+  <li><b>"Easy Img wants to use your confidential information stored in…"</b>: this is macOS asking to read the saved API key from your Keychain. Choose <i>Always Allow</i>. It can ask again after the app is rebuilt or updated.</li>
+  <li><b>"Easy Img would like to access files in your Documents/Downloads folder"</b>: macOS asks the first time you browse a protected folder. Allow it to see that folder's images.</li>
+  <li><b>A thumbnail shows a generic icon</b>: macOS couldn't make a preview of that file. It may be damaged or in an unsupported format.</li>
+  <li><b>The chat says there is no API key</b>: add one in <i>Settings → AI</i> for the provider selected as Assistant.</li>
+  <li><b>An AI error mentions the model</b>: the model name may be wrong or unavailable to your account. Press <i>Load Models</i> in <i>Settings → AI</i> and choose one from the list.</li>
+</ul>
+
+<footer>Easy Img · Copyright © 2026 Leonardo Ribeiro Oliveira. Released under the MIT License.</footer>
+</body>
+</html>
